@@ -1,7 +1,6 @@
-fastapi
-uvicorn
-faster-whisper
+runpod==1.6.2
+pydub==0.25.1
+faster-whisper==1.0.3
 pyannote.audio==3.1.1
-torch>=2.0.0
-pydub
-ffmpeg-python
+huggingface_hub==0.25.2
+numpy<2.0
