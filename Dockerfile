@@ -6,26 +6,22 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /app
 
-# ---- שלב התקנות עם הקפאה מוחלטת ----
+# התקנת גרסאות תואמות מראש
 RUN pip install --upgrade pip setuptools wheel
+RUN pip install "torch==2.3.0" "torchaudio==2.3.0" --extra-index-url https://download.pytorch.org/whl/cu121
+RUN pip install "numpy>=2.0.0"
+RUN pip install "faster-whisper==1.0.3" "pydub" "soundfile" "ffmpeg-python"
+RUN pip install git+https://github.com/pyannote/pyannote-audio.git@release/3.1.1
+RUN pip install runpod fastapi uvicorn
 
-# מתקינים קודם numpy ו-torch בגירסאות תואמות
-RUN pip install "numpy==1.26.4" "torch==2.3.0" "torchaudio==2.3.0" --extra-index-url https://download.pytorch.org/whl/cu121
+# 🩹 תיקון באג np.NaN → np.nan
+RUN sed -i 's/np.NaN/np.nan/g' /usr/local/lib/python3.10/site-packages/pyannote/audio/core/inference.py
 
-# מתקינים את pyannote.audio ישירות ממקור GitHub עם תלותים מתוקנים
-RUN pip install git+https://github.com/pyannote/pyannote-audio.git@release/3.1.1 --no-deps
-
-# כעת מתקינים את שאר הספריות
-COPY requirements.txt .
-RUN pip install -r requirements.txt
-RUN pip install runpod
-
-# הדפסת גרסאות לבדיקה
+# בדיקת גרסאות
 RUN python3 - <<'PY'
-import numpy, torch, pyannote.audio
+import numpy, pyannote.audio
 print("✅ NumPy:", numpy.__version__)
-print("✅ Torch:", torch.__version__)
-print("✅ PyAnnote:", pyannote.audio.__version__)
+print("✅ PyAnnote fixed NaN bug successfully!")
 PY
 
 COPY . .
