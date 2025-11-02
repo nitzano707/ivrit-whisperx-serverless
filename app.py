@@ -2,13 +2,15 @@ from fastapi import FastAPI, UploadFile, File
 from faster_whisper import WhisperModel
 from pyannote.audio import Pipeline
 from pydub import AudioSegment
-import tempfile, os, json
+import tempfile, os, json, torch
 
 app = FastAPI(title="Transcription + Speaker Diarization API")
 
 # --- טוען מודלים פעם אחת ---
 print("🚀 Loading models...")
-asr_model = WhisperModel("small", device="cpu")  # או "medium" אם יש GPU
+device = "cuda" if torch.cuda.is_available() else "cpu"
+
+asr_model = WhisperModel("small", device=device)
 dia_model = Pipeline.from_pretrained(
     "pyannote/speaker-diarization-3.0",
     use_auth_token="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"
@@ -33,11 +35,12 @@ async def transcribe(file: UploadFile = File(...)):
         # שלב 2: זיהוי דוברים
         print("👥 Running speaker diarization...")
         diarization = dia_model(temp_in.name)
-        speakers = []
-        for turn, _, speaker in diarization.itertracks(yield_label=True):
-            speakers.append({"start": turn.start, "end": turn.end, "speaker": speaker})
+        speakers = [
+            {"start": turn.start, "end": turn.end, "speaker": speaker}
+            for turn, _, speaker in diarization.itertracks(yield_label=True)
+        ]
 
-        # שלב 3: שילוב לפי זמן (פשוט)
+        # שלב 3: שילוב לפי זמן
         final = []
         for seg in transcript:
             spk = next((s["speaker"] for s in speakers if s["start"] <= seg["start"] <= s["end"]), "unknown")
@@ -48,3 +51,8 @@ async def transcribe(file: UploadFile = File(...)):
 
     except Exception as e:
         return {"status": "error", "message": str(e)}
+
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
