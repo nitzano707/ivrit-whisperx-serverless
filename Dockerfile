@@ -1,18 +1,34 @@
-FROM pytorch/pytorch:2.3.0-cuda12.1-cudnn8-runtime
+FROM runpod/base:0.4.0-cuda11.8.0
 
+# הגדרת משתני סביבה
+ENV PYTHONUNBUFFERED=1 \
+    DEBIAN_FRONTEND=noninteractive \
+    HF_HOME=/tmp
+
+# עדכון והתקנת תלויות מערכת
+RUN apt-get update && apt-get install -y \
+    python3-pip \
+    python3-dev \
+    ffmpeg \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+# יצירת תיקיית עבודה
 WORKDIR /app
 
-# ffmpeg לאודיו
-RUN apt-get update && apt-get install -y ffmpeg && rm -rf /var/lib/apt/lists/*
-
+# העתקת requirements והתקנה
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt && pip install --no-cache-dir "numpy<2.0"
+RUN pip3 install --no-cache-dir -r requirements.txt
 
+# הורדת מודלים מראש (אופציונלי - יאיץ את הפעלה ראשונה)
+RUN python3 -c "from faster_whisper import WhisperModel; WhisperModel('small', device='cpu', download_root='/tmp/whisper')"
+
+# העתקת קבצי האפליקציה
 COPY app.py .
+COPY handler.py .
 
-# (אופציונלי) טעינת מודלים בזמן build כדי לקצר זמן אתחול — יגדיל את האימג'
-# RUN python -c "from faster_whisper import WhisperModel; WhisperModel('small', device='cpu')" \
-#  && python -c "from pyannote.audio import Pipeline; import os; Pipeline.from_pretrained('pyannote/speaker-diarization-3.0', use_auth_token=os.getenv('HF_TOKEN',''))"
-
+# פורט לבדיקות מקומיות
 EXPOSE 8000
-CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]
+
+# הגדרת נקודת כניסה ל-RunPod
+CMD ["python3", "handler.py"]
