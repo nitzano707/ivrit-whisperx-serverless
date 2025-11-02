@@ -1,0 +1,50 @@
+from fastapi import FastAPI, UploadFile, File
+from faster_whisper import WhisperModel
+from pyannote.audio import Pipeline
+from pydub import AudioSegment
+import tempfile, os, json
+
+app = FastAPI(title="Transcription + Speaker Diarization API")
+
+# --- טוען מודלים פעם אחת ---
+print("🚀 Loading models...")
+asr_model = WhisperModel("small", device="cpu")  # או "medium" אם יש GPU
+dia_model = Pipeline.from_pretrained(
+    "pyannote/speaker-diarization-3.0",
+    use_auth_token="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"
+)
+print("✅ Models loaded!")
+
+@app.post("/transcribe")
+async def transcribe(file: UploadFile = File(...)):
+    """מקבל קובץ אודיו -> מחזיר תמלול עם דוברים"""
+    try:
+        # שמירת קובץ זמני
+        temp_in = tempfile.NamedTemporaryFile(delete=False, suffix=".wav")
+        audio = AudioSegment.from_file(file.file)
+        audio = audio.set_frame_rate(16000).set_channels(1)
+        audio.export(temp_in.name, format="wav")
+
+        # שלב 1: תמלול
+        print("🗣️ Running transcription...")
+        segments, _ = asr_model.transcribe(temp_in.name, beam_size=5, language="he")
+        transcript = [{"start": s.start, "end": s.end, "text": s.text} for s in segments]
+
+        # שלב 2: זיהוי דוברים
+        print("👥 Running speaker diarization...")
+        diarization = dia_model(temp_in.name)
+        speakers = []
+        for turn, _, speaker in diarization.itertracks(yield_label=True):
+            speakers.append({"start": turn.start, "end": turn.end, "speaker": speaker})
+
+        # שלב 3: שילוב לפי זמן (פשוט)
+        final = []
+        for seg in transcript:
+            spk = next((s["speaker"] for s in speakers if s["start"] <= seg["start"] <= s["end"]), "unknown")
+            final.append({"start": seg["start"], "end": seg["end"], "speaker": spk, "text": seg["text"]})
+
+        os.remove(temp_in.name)
+        return {"status": "success", "results": final}
+
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
