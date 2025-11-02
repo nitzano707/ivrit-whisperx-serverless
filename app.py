@@ -2,24 +2,24 @@ from fastapi import FastAPI, UploadFile, File
 from faster_whisper import WhisperModel
 from pyannote.audio import Pipeline
 from pydub import AudioSegment
-import tempfile, os, json, torch
+import tempfile, os, torch, uvicorn
 
 app = FastAPI(title="Transcription + Speaker Diarization API")
 
-# --- טוען מודלים פעם אחת ---
+# --- טעינת מודלים מראש ---
 print("🚀 Loading models...")
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
 asr_model = WhisperModel("small", device=device)
 dia_model = Pipeline.from_pretrained(
     "pyannote/speaker-diarization-3.0",
-    use_auth_token="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"
+    use_auth_token=os.getenv("HF_TOKEN")
 )
-print("✅ Models loaded!")
+print("✅ Models loaded successfully!")
 
 @app.post("/transcribe")
 async def transcribe(file: UploadFile = File(...)):
-    """מקבל קובץ אודיו -> מחזיר תמלול עם דוברים"""
+    """מקבל קובץ אודיו -> מחזיר תמלול עם זיהוי דוברים"""
     try:
         # שמירת קובץ זמני
         temp_in = tempfile.NamedTemporaryFile(delete=False, suffix=".wav")
@@ -40,11 +40,16 @@ async def transcribe(file: UploadFile = File(...)):
             for turn, _, speaker in diarization.itertracks(yield_label=True)
         ]
 
-        # שלב 3: שילוב לפי זמן
+        # שלב 3: שילוב בין תמלול לדוברים
         final = []
         for seg in transcript:
             spk = next((s["speaker"] for s in speakers if s["start"] <= seg["start"] <= s["end"]), "unknown")
-            final.append({"start": seg["start"], "end": seg["end"], "speaker": spk, "text": seg["text"]})
+            final.append({
+                "start": seg["start"],
+                "end": seg["end"],
+                "speaker": spk,
+                "text": seg["text"]
+            })
 
         os.remove(temp_in.name)
         return {"status": "success", "results": final}
@@ -54,5 +59,4 @@ async def transcribe(file: UploadFile = File(...)):
 
 
 if __name__ == "__main__":
-    import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
