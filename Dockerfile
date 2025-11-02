@@ -1,24 +1,49 @@
-# --- שלב 1: בסיס CUDA עם PyTorch ---
+# --- בסיס: PyTorch תואם CUDA 12.1 ---
 FROM pytorch/pytorch:2.3.0-cuda12.1-cudnn8-runtime
 
-# --- שלב 2: הגדרת סביבת עבודה ---
+# סביבת עבודה
 WORKDIR /app
 
-# --- שלב 3: התקנת ספריות ---
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt \
-    && apt-get update && apt-get install -y ffmpeg \
-    && rm -rf /var/lib/apt/lists/*
+# מערכת + ffmpeg
+RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg && \
+    rm -rf /var/lib/apt/lists/*
 
-# --- שלב 4: העתקת קובצי האפליקציה ---
+# קאש למודלים (יישאר בליירים)
+ENV HF_HOME=/models/hf \
+    TRANSFORMERS_CACHE=/models/hf \
+    PYTORCH_ENABLE_MPS_FALLBACK=1
+
+# התקנות פייתון
+COPY requirements.txt .
+# התקנת torchaudio תואם CUDA 12.1 (לפני שאר החבילות)
+RUN pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cu121 \
+      torchaudio==2.3.0+cu121 && \
+    pip install --no-cache-dir -r requirements.txt
+
+# קוד האפליקציה
 COPY app.py .
 
-# --- שלב 5: הורדת המודלים בזמן הבנייה ---
-RUN python -c "from faster_whisper import WhisperModel; WhisperModel('small', device='cpu')" \
- && python -c "from pyannote.audio import Pipeline; Pipeline.from_pretrained('pyannote/speaker-diarization-3.0', use_auth_token='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')"
+# --- הורדת מודלים בזמן build (ללא שריפת טוקן בליירים) ---
+# נדרש docker buildx/buildkit והעברת סוד:  --secret id=HF_TOKEN,env=HF_TOKEN
+# 1) Whisper "small" (faster-whisper) ייכנס לקאש
+RUN python - <<'PY'\nfrom faster_whisper import WhisperModel\nWhisperModel('small', device='cpu')\nPY
 
-# --- שלב 6: פתיחת פורט ---
+# 2) pyannote diarization (דורש טוקן HF בזמן build כדי לעבור gating)
+# הטוקן יועבר זמנית כ-secret בזמן build ולא יישמר בלייר
+RUN --mount=type=secret,id=HF_TOKEN \
+    bash -lc 'export HUGGING_FACE_HUB_TOKEN=$(cat /run/secrets/HF_TOKEN); \
+      python - << "PY"\n\
+from huggingface_hub import login\n\
+import os\n\
+tok=os.environ.get("HUGGING_FACE_HUB_TOKEN")\n\
+if not tok:\n\
+    raise SystemExit("HF token missing at build time")\n\
+login(token=tok)\n\
+from pyannote.audio import Pipeline\n\
+Pipeline.from_pretrained("pyannote/speaker-diarization-3.0")\n\
+PY'
+
 EXPOSE 8000
 
-# --- שלב 7: הפעלת השרת ---
+# הרצה
 CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]
