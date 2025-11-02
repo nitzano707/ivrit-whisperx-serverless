@@ -1,12 +1,21 @@
+# --- שרת ואינטגרציה ---
 fastapi==0.115.0
 uvicorn[standard]==0.30.6
+python-multipart
+ffmpeg-python
+
+# --- דיבור ותמלול ---
 faster-whisper==1.0.3
-pyannote.audio==3.1.1
+pydub==0.25.1
+soundfile
+
+# --- למידת מכונה ותשתיות ---
 torch==2.3.0
 torchaudio==2.3.0
-pydub==0.25.1
-numpy==1.26.4
-soundfile
-ffmpeg-python
-python-multipart
+numpy>=2.0.0
 
+# --- זיהוי דוברים ---
+pyannote.audio>=3.3.1
+
+# --- SDK לסביבת RunPod ---
+runpod
