@@ -9,18 +9,15 @@ WORKDIR /app
 
 # 🧾 התקנת חבילות מרכזיות עם תאימות ל-NumPy 2.x
 RUN pip install --upgrade pip setuptools wheel
-RUN pip install "torch==2.3.0" "torchaudio==2.3.0" --extra-index-url https://download.pytorch.org/whl/cu121
-RUN pip install "numpy>=2.0.0"
 
-# 🧠 התקנת הספריות שלך
+# התקנת Torch, Torchaudio ו-NumPy לפני שאר התלויות
+RUN pip install --no-cache-dir "torch==2.3.0" "torchaudio==2.3.0" --extra-index-url https://download.pytorch.org/whl/cu121
+RUN pip install --no-cache-dir "numpy>=2.0.0"
+
+# 🧠 התקנת שאר הספריות מ-requirements.txt
 COPY requirements.txt .
-RUN pip install -r requirements.txt
-
-# 🧩 התקנת גרסה עדכנית של pyannote.audio שתומכת ב-NumPy 2.x
-RUN pip install "pyannote.audio>=3.3.1"
-
-# ✅ התקנת RunPod SDK
-RUN pip install runpod
+# התקנת התלויות תוך דרישה ל-pyannote.audio 3.3.1 ומעלה וניקוי קאש
+RUN pip install --no-cache-dir -r requirements.txt
 
 # 🧪 בדיקת תאימות
 RUN python3 - <<'PY'
