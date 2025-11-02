@@ -1,34 +1,32 @@
-FROM runpod/base:0.4.0-cuda11.8.0
+# 🧩 שלב בסיסי – שימוש בתמונה רשמית עם תמיכת CUDA
+FROM nvidia/cuda:12.1.0-runtime-ubuntu22.04
 
-# הגדרת משתני סביבה
-ENV PYTHONUNBUFFERED=1 \
-    DEBIAN_FRONTEND=noninteractive \
-    HF_HOME=/tmp
-
-# עדכון והתקנת תלויות מערכת
+# 🕓 עדכון מערכת והתקנת תלויות בסיסיות
 RUN apt-get update && apt-get install -y \
-    python3-pip \
-    python3-dev \
-    ffmpeg \
-    git \
-    && rm -rf /var/lib/apt/lists/*
+    python3 python3-pip ffmpeg git \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# יצירת תיקיית עבודה
+# 📁 יצירת תיקיית העבודה
 WORKDIR /app
 
-# העתקת requirements והתקנה
+# 🧾 העתקת קובץ הדרישות והתקנת ספריות
 COPY requirements.txt .
-RUN pip3 install --no-cache-dir -r requirements.txt
+RUN pip install --upgrade pip
+RUN pip install -r requirements.txt
 
-# הורדת מודלים מראש (אופציונלי - יאיץ את הפעלה ראשונה)
-RUN python3 -c "from faster_whisper import WhisperModel; WhisperModel('small', device='cpu', download_root='/tmp/whisper')"
+# ✅ התקנת RunPod SDK (לסביבת Serverless)
+RUN pip install runpod
 
-# העתקת קבצי האפליקציה
-COPY app.py .
-COPY handler.py .
+# 🧠 העתקת כל קבצי האפליקציה
+COPY . .
 
-# פורט לבדיקות מקומיות
-EXPOSE 8000
+# 🔒 משתני סביבה (ניתן לשנות ב-RunPod Dashboard)
+ENV HF_TOKEN=""
+ENV WHISPER_MODEL="small"
 
-# הגדרת נקודת כניסה ל-RunPod
+# 🧠 הורדת מודלים רק בעת ריצה (לא בשלב ה-build)
+# זה מונע קובץ Docker כבד מדי.
+# המודלים יורדו אוטומטית בקריאה הראשונה ל-handler.py
+
+# ⚙️ פקודת ההפעלה של RunPod Serverless
 CMD ["python3", "handler.py"]
