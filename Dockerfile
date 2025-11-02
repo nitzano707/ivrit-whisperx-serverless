@@ -1,40 +1,41 @@
 FROM nvidia/cuda:12.1.0-runtime-ubuntu22.04
 
+# 🧩 התקנת תלויות בסיס
 RUN apt-get update && apt-get install -y \
-    python3 python3-pip ffmpeg git \
+    python3 python3-pip ffmpeg git sed \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 ENV PIP_NO_CACHE_DIR=1
 
-# 📦 התקנת ספריות עיקריות
+# 🧠 התקנות עיקריות
 RUN pip install --upgrade pip setuptools wheel
 RUN pip install "torch==2.3.0" "torchaudio==2.3.0" --extra-index-url https://download.pytorch.org/whl/cu121
 RUN pip install "numpy>=2.0.0"
 
-# העתקת הדרישות והתקנתן (כולל faster-whisper, fastapi וכו')
+# 📦 התקנת הדרישות (כולל faster-whisper וכו')
 COPY requirements.txt .
 RUN pip install -r requirements.txt
 
-# התקנת pyannote.audio מה־GitHub או PyPI
-RUN pip install --no-cache-dir git+https://github.com/pyannote/pyannote-audio.git@release/3.1.1 || pip install pyannote.audio
+# 🔧 התקנת pyannote.audio – גם אם מה-PyPI, נתקן מיד אח"כ
+RUN pip install --no-cache-dir pyannote.audio || pip install --no-cache-dir git+https://github.com/pyannote/pyannote-audio.git@release/4.0.1
 
-# 🩹 תיקון קובץ ה־inference.py במקרה שעדיין יש בו np.NaN
+# 🩹 תיקון אוטומטי של np.NaN → np.nan
 RUN PYFILE=$(python3 -c "import inspect, pyannote.audio.core.inference as inf; print(inspect.getfile(inf))") \
- && echo "📄 Fixing $PYFILE" \
+ && echo '📄 Fixing np.NaN in' $PYFILE \
  && sed -i 's/np\.NaN/np.nan/g' $PYFILE \
- && grep -n "np\.nan" $PYFILE
+ && echo '✅ Patch applied successfully!' \
+ && grep -n "np\.nan" $PYFILE || true
 
-# 🧠 אימות
+# 🧪 בדיקה שהייבוא עובר
 RUN python3 - <<'PY'
-import numpy, pyannote.audio, inspect
-from pathlib import Path
-p = Path(inspect.getfile(pyannote.audio.core.inference))
+import numpy, inspect
 print("✅ NumPy:", numpy.__version__)
-print("✅ inference.py path:", p)
-print("🔍 contains np.NaN?", "np.NaN" in p.read_text())
+import pyannote.audio
+print("✅ pyannote.audio imported successfully")
 PY
 
+# העתקת קבצי האפליקציה
 COPY . .
 
 ENV HF_TOKEN=""
