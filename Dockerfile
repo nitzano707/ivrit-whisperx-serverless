@@ -1,34 +1,33 @@
-# 🧩 שלב בסיסי – תמונה עם תמיכת CUDA לצורך Torch
+# 🧩 בסיס עם CUDA עבור Torch
 FROM nvidia/cuda:12.1.0-runtime-ubuntu22.04
 
-# 🕓 עדכון מערכת והתקנת תלויות בסיסיות
+# 🕓 עדכון מערכת והתקנת תלויות
 RUN apt-get update && apt-get install -y \
     python3 python3-pip ffmpeg git \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# 📁 תיקיית העבודה
+# 📁 תיקיית עבודה
 WORKDIR /app
 
-# 🧾 העתקת הדרישות והתקנת ספריות
+# 🧾 התקנת דרישות עם כפייה של numpy ישנה
 COPY requirements.txt .
 RUN pip install --upgrade pip
-# מתקין את כל הספריות + מכריח NumPy להישאר בגרסה תואמת
-RUN pip install -r requirements.txt \
- && pip install -U numpy==1.26.4 \
- && echo "✅ Installed NumPy version:" && python3 -c "import numpy; print(numpy.__version__)"
+RUN pip install -r requirements.txt || true
+# כפייה מלאה של גרסת NumPy
+RUN pip install --force-reinstall "numpy==1.26.4"
 
-# ✅ התקנת RunPod SDK (לסביבת Serverless)
+# ✅ התקנת RunPod SDK
 RUN pip install runpod
 
-# 🧠 העתקת כל קבצי האפליקציה
+# הדפסת גרסת NumPy בזמן build כדי לוודא
+RUN python3 -c "import numpy; print('✅ NumPy version in image:', numpy.__version__)"
+
+# 🧠 העתקת קבצי האפליקציה
 COPY . .
 
-# 🔒 משתני סביבה (ניתן להגדיר מחדש בלוח הבקרה של RunPod)
+# 🔒 משתני סביבה
 ENV HF_TOKEN=""
 ENV WHISPER_MODEL="small"
 
-# 🧠 המודלים יורדו רק בזמן ריצה, לא בשלב הבנייה
-# זה מקטין משמעותית את גודל התמונה.
-
-# ⚙️ הפקודה הראשית – Serverless Handler
-CMD ["python3", "handler.py"]
+# 🩹 כפיית NumPy גם בזמן ריצה (ליתר ביטחון)
+ENTRYPOINT ["sh", "-c", "pip install -q --force-reinstall numpy==1.26.4 && python3 handler.py"]
