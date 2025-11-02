@@ -6,24 +6,24 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /app
 
-# התקנת ספריות בסיס
+# התקנות עיקריות
 RUN pip install --upgrade pip setuptools wheel
 RUN pip install "torch==2.3.0" "torchaudio==2.3.0" --extra-index-url https://download.pytorch.org/whl/cu121
 RUN pip install "numpy>=2.0.0"
 
-# התקנת שאר התלויות שלך
+# התקנות בסיסיות
 COPY requirements.txt .
 RUN pip install -r requirements.txt
 
-# הסרת pyannote הישנה והתקנת גרסה חדשה תואמת ל-NumPy 2.x
+# ✅ התקנת PyAnnote החדש מהמאגר הרשמי שתומך ב-NumPy 2.x
 RUN pip uninstall -y pyannote.audio || true
-RUN pip install --no-cache-dir --force-reinstall "pyannote.audio>=3.3.2"
+RUN pip install --no-cache-dir --force-reinstall git+https://github.com/pyannote/pyannote-audio.git@release/4.0.1
 
-# אימות גרסאות
+# בדיקה
 RUN python3 - <<'PY'
 import numpy, pyannote.audio
-print("✅ NumPy:", numpy.__version__)
-print("✅ PyAnnote:", pyannote.audio.__version__)
+print("✅ NumPy version:", numpy.__version__)
+print("✅ PyAnnote version:", pyannote.audio.__version__)
 PY
 
 COPY . .
