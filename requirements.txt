@@ -1,6 +1,10 @@
 fastapi
 uvicorn
 runpod
+faster-whisper
 whisperx
+pydub
 numpy
 soundfile
+yt-dlp
+aiohttp
