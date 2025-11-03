@@ -1,31 +1,46 @@
-import runpod
-import subprocess
 import os
-from app import process_audio
+import runpod
+from app import process_audio, save_b64_to_wav, download_youtube_audio
 
-def download_youtube_audio(url):
-    output_path = "/tmp/youtube.wav"
-    subprocess.run([
-        "yt-dlp", "-x", "--audio-format", "wav", "-o", output_path, url
-    ], check=True)
-    return output_path
+# אופציונלי: קריאה למשתני סביבה שנשמרו ב-RunPod (אם תרצה להשתמש בהם)
+RUNPOD_ENDPOINT_ID = os.getenv("RUNPOD_ENDPOINT_ID", "")
+RUNPOD_API_KEY = os.getenv("RUNPOD_API_KEY", "")
 
 def handler(event):
+    """
+    קלט צפוי (JSON):
+    {
+      "input": {
+        "youtube_url": "...",         # אופציונלי
+        "audio_b64": "data:audio/wav;base64,...."  # אופציונלי
+      }
+    }
+    חייב להיות youtube_url או audio_b64 (אחד מהם לפחות).
+    """
     try:
-        input_data = event.get("input", {})
-        audio_path = input_data.get("audio_path")
-        youtube_url = input_data.get("youtube_url")
+        data = (event or {}).get("input", {}) or {}
+        youtube_url = data.get("youtube_url", "").strip()
+        audio_b64 = data.get("audio_b64", "")
+
+        if not youtube_url and not audio_b64:
+            return {"status": "error", "message": "נא לספק youtube_url או audio_b64"}
 
         if youtube_url:
-            print("🔹 מוריד אודיו מיוטיוב...")
-            audio_path = download_youtube_audio(youtube_url)
+            in_path = download_youtube_audio(youtube_url)
+        else:
+            in_path = save_b64_to_wav(audio_b64)
 
-        if not audio_path or not os.path.exists(audio_path):
-            return {"error": "לא נמצא קובץ אודיו או קישור תקין."}
+        # עיבוד מלא (תמלול + דוברים + מיזוג)
+        segments = process_audio(in_path)
 
-        print("🔹 מתחיל עיבוד...")
-        result = process_audio(audio_path)
-        return {"status": "success", "segments": result}
+        # ניקוי קובץ המקור המקומי
+        try:
+            if in_path and os.path.exists(in_path):
+                os.remove(in_path)
+        except Exception:
+            pass
+
+        return {"status": "success", "segments": segments}
 
     except Exception as e:
         return {"status": "error", "message": str(e)}
