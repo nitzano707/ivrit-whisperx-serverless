@@ -1,5 +1,5 @@
 # ==========================================================
-# WhisperX + FasterWhisper (Light Build for GitHub Codespaces)
+# WhisperX Diarization only - for RunPod Serverless
 # ==========================================================
 
 FROM python:3.10-slim
@@ -12,20 +12,17 @@ RUN apt-get update && \
 
 WORKDIR /app
 
-# העתקת הדרישות
+# התקנת ספריות
 COPY requirements.txt /app/requirements.txt
-
-# התקנת חבילות Python קלות
 RUN pip install --upgrade pip && \
-    pip install torch==2.3.0+cpu torchaudio==2.3.0+cpu -f https://download.pytorch.org/whl/cpu/torch_stable.html && \
-    pip install git+https://github.com/m-bain/whisperX.git && \
     pip install -r requirements.txt && \
     rm -rf ~/.cache/pip
 
 # העתקת קבצי האפליקציה
 COPY app.py handler.py /app/
 
-ENV WHISPER_MODEL=small
+# משתני סביבה
 ENV PYTHONUNBUFFERED=1
+ENV WHISPERX_DISABLE_HF_AUTH=1
 
 CMD ["python3", "handler.py"]
