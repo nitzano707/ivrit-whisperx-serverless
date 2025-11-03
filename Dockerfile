@@ -1,10 +1,11 @@
 # ==========================================================
-# WhisperX Diarization only - for RunPod Serverless
+# Combined IVRIT-AI Transcription + WhisperX Diarization
+# RunPod Serverless ready
 # ==========================================================
 
 FROM python:3.10-slim
 
-# התקנת תלויות מערכת בסיסיות בלבד
+# התקנת ספריות מערכת
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         ffmpeg git libsndfile1 && \
@@ -12,7 +13,7 @@ RUN apt-get update && \
 
 WORKDIR /app
 
-# התקנת ספריות
+# התקנת חבילות Python
 COPY requirements.txt /app/requirements.txt
 RUN pip install --upgrade pip && \
     pip install -r requirements.txt && \
@@ -21,7 +22,6 @@ RUN pip install --upgrade pip && \
 # העתקת קבצי האפליקציה
 COPY app.py handler.py /app/
 
-# משתני סביבה
 ENV PYTHONUNBUFFERED=1
 ENV WHISPERX_DISABLE_HF_AUTH=1
 
