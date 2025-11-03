@@ -1,18 +1,11 @@
-# --- שרת ---
 fastapi==0.115.0
 uvicorn[standard]==0.30.6
-python-multipart
-ffmpeg-python
-
-# --- תמלול ---
 faster-whisper==1.0.3
-pydub==0.25.1
-soundfile
-
-# --- ML ---
+git+https://github.com/m-bain/whisperX.git
 torch==2.3.0
 torchaudio==2.3.0
-numpy>=2.0.0
-
-# --- RunPod ---
-runpod
+pydub==0.25.1
+numpy<2.0
+soundfile
+ffmpeg-python
+python-multipart
