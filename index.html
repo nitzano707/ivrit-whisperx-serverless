@@ -1,28 +1,185 @@
-<!DOCTYPE html>
-<html lang="he">
+<!doctype html>
+<html lang="he" dir="rtl">
 <head>
-<meta charset="UTF-8">
-<title>תמלול + זיהוי דוברים</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>תמלול + זיהוי דוברים (RunPod)</title>
+  <style>
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;max-width:880px;margin:40px auto;padding:0 16px;background:#fafafa;color:#111}
+    .card{background:#fff;border:1px solid #eee;border-radius:14px;padding:18px;box-shadow:0 1px 8px rgba(0,0,0,.04)}
+    h1{font-size:1.4rem;margin:0 0 12px}
+    label{display:block;margin:10px 0 6px;font-weight:600}
+    input[type="url"], input[type="text"]{width:100%;padding:10px 12px;border:1px solid #ddd;border-radius:10px}
+    button{appearance:none;border:0;background:#111;color:#fff;padding:10px 16px;border-radius:10px;cursor:pointer}
+    button:disabled{opacity:.6;cursor:not-allowed}
+    .row{display:flex;gap:10px;align-items:center;margin-top:10px}
+    .muted{color:#666;font-size:.9rem}
+    pre{background:#0b1020;color:#d6deff;padding:14px;border-radius:12px;overflow:auto;max-height:420px}
+    table{width:100%;border-collapse:collapse;font-size:.95rem}
+    th,td{border-bottom:1px solid #eee;padding:8px;text-align:right;vertical-align:top}
+    .pill{display:inline-block;background:#eef3ff;border:1px solid #dbe6ff;border-radius:999px;padding:2px 8px;font-size:.8rem}
+    .error{background:#ffecee;border:1px solid #ffc2c7;color:#8a1020;border-radius:10px;padding:10px;margin-top:12px}
+    .ok{background:#ecfff3;border:1px solid #b9f1cc;color:#0d6b33;border-radius:10px;padding:10px;margin-top:12px}
+    .spinner{display:inline-block;width:1em;height:1em;border:2px solid #ddd;border-top-color:#111;border-radius:50%;animation:spin 0.9s linear infinite;margin-inline-start:8px;vertical-align:-2px}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    code{background:#f3f3f5;border:1px solid #ececf0;border-radius:6px;padding:2px 6px}
+  </style>
 </head>
 <body>
-<h2>העלה קובץ או הדבק קישור YouTube</h2>
-<input type="file" id="audio" accept="audio/*,video/*"><br><br>
-<input type="text" id="url" placeholder="https://www.youtube.com/..."><br><br>
-<button id="send">שלח לעיבוד</button>
-<pre id="result"></pre>
+  <div class="card">
+    <h1>תמלול + זיהוי דוברים (RunPod)</h1>
 
-<script>
-document.getElementById('send').onclick = async () => {
-  const f = document.getElementById('audio').files[0];
-  const url = document.getElementById('url').value;
-  const body = f ? {audio_path: f.name} : {youtube_url: url};
-  const res = await fetch('/api', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({input: body})
-  });
-  document.getElementById('result').textContent = await res.text();
-};
-</script>
+    <p class="muted">
+      פותחים את הדף הזה דרך <b>HTTP/HTTPS</b> (למשל <code>npx serve</code>, Netlify, GitHub Pages).
+      פתיחה כ־<code>file://</code> תוביל ל־CORS/Origin errors כמו <code>origin 'null'</code>.
+    </p>
+
+    <label for="endpoint">RunPod Endpoint</label>
+    <input id="endpoint" type="url" placeholder="https://YOUR_RUNPOD_ENDPOINT_HERE/" value="https://YOUR_RUNPOD_ENDPOINT_HERE/" />
+
+    <label for="yt">קישור YouTube</label>
+    <input id="yt" type="url" placeholder="https://www.youtube.com/watch?v=XXXX" />
+
+    <div class="row">
+      <button id="sendBtn">שלח לעיבוד</button>
+      <span id="status" class="muted"></span>
+    </div>
+
+    <div id="alert" style="display:none"></div>
+
+    <div id="resultWrap" style="display:none; margin-top:16px">
+      <div class="ok">הבקשה בוצעה בהצלחה.</div>
+      <h3>תוצאות מעובדות</h3>
+      <table id="segmentsTable">
+        <thead>
+          <tr>
+            <th>התחלה</th>
+            <th>סיום</th>
+            <th>דובר</th>
+            <th>טקסט</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+
+      <h3>JSON גולמי</h3>
+      <pre id="raw"></pre>
+    </div>
+  </div>
+
+  <script>
+    const $ = sel => document.querySelector(sel);
+    const sendBtn = $('#sendBtn');
+    const statusEl = $('#status');
+    const alertEl = $('#alert');
+    const resultWrap = $('#resultWrap');
+    const tbody = $('#segmentsTable tbody');
+    const raw = $('#raw');
+
+    function showError(msg) {
+      alertEl.style.display = 'block';
+      alertEl.className = 'error';
+      alertEl.textContent = msg;
+    }
+    function clearError() {
+      alertEl.style.display = 'none';
+      alertEl.textContent = '';
+      alertEl.className = '';
+    }
+
+    function formatTime(sec) {
+      if (typeof sec !== 'number' || isNaN(sec)) return '-';
+      const s = Math.floor(sec % 60).toString().padStart(2,'0');
+      const m = Math.floor((sec/60) % 60).toString().padStart(2,'0');
+      const h = Math.floor(sec/3600).toString().padStart(2,'0');
+      return (h !== '00' ? (h + ':') : '') + m + ':' + s;
+    }
+
+    async function callRunPod(endpointUrl, youtubeUrl) {
+      // RunPod serverless proxy מקבל JSON בסכמה { input: { ... } }
+      const payload = { input: { youtube_url: youtubeUrl } };
+      const res = await fetch(endpointUrl.replace(/\/+$/,'/'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        mode: 'cors',
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        const text = await res.text().catch(()=> '');
+        throw new Error(`HTTP ${res.status} – ${text || res.statusText}`);
+      }
+      // ייתכנו שני פורמטים: { status, segments } או החזרה גולמית
+      return res.json();
+    }
+
+    sendBtn.onclick = async () => {
+      clearError();
+      resultWrap.style.display = 'none';
+      tbody.innerHTML = '';
+      raw.textContent = '';
+
+      const endpointUrl = $('#endpoint').value.trim();
+      const youtubeUrl = $('#yt').value.trim();
+
+      if (!endpointUrl || !/^https?:\/\//i.test(endpointUrl)) {
+        showError('יש להזין כתובת Endpoint תקינה (http/https).');
+        return;
+      }
+      if (!youtubeUrl || !/^https?:\/\/(www\.)?(youtube\.com|youtu\.be)\//i.test(youtubeUrl)) {
+        showError('יש להזין כתובת YouTube תקינה.');
+        return;
+      }
+
+      try {
+        sendBtn.disabled = true;
+        statusEl.innerHTML = 'מריץ עיבוד ב־RunPod <span class="spinner"></span>';
+
+        const data = await callRunPod(endpointUrl, youtubeUrl);
+
+        statusEl.textContent = '';
+        sendBtn.disabled = false;
+
+        // ננסה לתמוך גם במבנה {status, segments} וגם ברשימת אובייקטים
+        const segments = Array.isArray(data)
+          ? data
+          : (Array.isArray(data?.segments) ? data.segments : []);
+
+        if (!segments.length) {
+          raw.textContent = JSON.stringify(data, null, 2);
+          showError('לא התקבלו מקטעים. בדוק את הפלט הגולמי למטה ואת לוג השרת.');
+          resultWrap.style.display = 'block';
+          return;
+        }
+
+        // הצגה בטבלה
+        for (const seg of segments) {
+          const tr = document.createElement('tr');
+          const tdStart = document.createElement('td');
+          const tdEnd = document.createElement('td');
+          const tdSpk = document.createElement('td');
+          const tdTxt = document.createElement('td');
+
+          tdStart.textContent = formatTime(seg.start);
+          tdEnd.textContent = formatTime(seg.end);
+          tdSpk.innerHTML = `<span class="pill">${seg.speaker ?? 'SPEAKER_UNKNOWN'}</span>`;
+          tdTxt.textContent = seg.text ?? '';
+
+          tr.appendChild(tdStart);
+          tr.appendChild(tdEnd);
+          tr.appendChild(tdSpk);
+          tr.appendChild(tdTxt);
+          tbody.appendChild(tr);
+        }
+
+        raw.textContent = JSON.stringify(data, null, 2);
+        resultWrap.style.display = 'block';
+
+      } catch (err) {
+        statusEl.textContent = '';
+        sendBtn.disabled = false;
+        showError(`נכשלה בקשת fetch: ${err.message}`);
+      }
+    };
+  </script>
 </body>
 </html>
