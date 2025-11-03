@@ -1,10 +1,14 @@
-fastapi
-uvicorn
-runpod
-faster-whisper
-whisperx
-pydub
-numpy
-soundfile
-yt-dlp
-aiohttp
+# RunPod serverless
+runpod==1.4.0
+
+# אודיו/וידאו וכלי עזר
+pydub==0.25.1
+yt-dlp==2025.01.08
+requests>=2.31.0
+tqdm>=4.66.0
+numpy>=1.26.4
+soundfile>=0.12.1
+
+# מודלים
+faster-whisper==1.0.1
+whisperx==3.1
