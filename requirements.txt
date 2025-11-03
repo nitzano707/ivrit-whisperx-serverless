@@ -1,11 +1,6 @@
-fastapi==0.115.0
-uvicorn[standard]==0.30.6
-faster-whisper==1.0.3
-git+https://github.com/m-bain/whisperX.git
-torch==2.3.0
-torchaudio==2.3.0
-pydub==0.25.1
-numpy<2.0
+fastapi
+uvicorn
+runpod
+whisperx
+numpy
 soundfile
-ffmpeg-python
-python-multipart
