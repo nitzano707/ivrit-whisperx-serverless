@@ -1,183 +1,391 @@
 <!doctype html>
 <html lang="he" dir="rtl">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>תמלול + זיהוי דוברים (RunPod)</title>
+  <meta charset="utf-8">
+  <title>תמללי — תמלול + זיהוי דוברים (RunPod)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;max-width:880px;margin:40px auto;padding:0 16px;background:#fafafa;color:#111}
-    .card{background:#fff;border:1px solid #eee;border-radius:14px;padding:18px;box-shadow:0 1px 8px rgba(0,0,0,.04)}
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;max-width:1100px;margin:28px auto;padding:0 16px;background:#fafafa;color:#111}
+    .grid{display:grid;grid-template-columns:1.2fr 1fr;gap:16px}
+    .card{background:#fff;border:1px solid #eee;border-radius:14px;padding:16px;box-shadow:0 1px 8px rgba(0,0,0,.04)}
     h1{font-size:1.4rem;margin:0 0 12px}
-    label{display:block;margin:10px 0 6px;font-weight:600}
-    input[type="url"], input[type="text"]{width:100%;padding:10px 12px;border:1px solid #ddd;border-radius:10px}
-    button{appearance:none;border:0;background:#111;color:#fff;padding:10px 16px;border-radius:10px;cursor:pointer}
+    label{display:block;margin:8px 0 4px;font-weight:600}
+    input,button{font:inherit}
+    input[type="url"],input[type="text"]{width:100%;padding:10px 12px;border:1px solid #ddd;border-radius:10px}
+    input[type="file"]{border:1px dashed #ccc;padding:10px;border-radius:10px;width:100%}
+    button{border:0;background:#111;color:#fff;padding:10px 14px;border-radius:10px;cursor:pointer}
     button:disabled{opacity:.6;cursor:not-allowed}
-    .row{display:flex;gap:10px;align-items:center;margin-top:10px}
+    .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
     .muted{color:#666;font-size:.9rem}
-    pre{background:#0b1020;color:#d6deff;padding:14px;border-radius:12px;overflow:auto;max-height:420px}
-    table{width:100%;border-collapse:collapse;font-size:.95rem}
-    th,td{border-bottom:1px solid #eee;padding:8px;text-align:right;vertical-align:top}
-    .pill{display:inline-block;background:#eef3ff;border:1px solid #dbe6ff;border-radius:999px;padding:2px 8px;font-size:.8rem}
-    .error{background:#ffecee;border:1px solid #ffc2c7;color:#8a1020;border-radius:10px;padding:10px;margin-top:12px}
-    .ok{background:#ecfff3;border:1px solid #b9f1cc;color:#0d6b33;border-radius:10px;padding:10px;margin-top:12px}
-    .spinner{display:inline-block;width:1em;height:1em;border:2px solid #ddd;border-top-color:#111;border-radius:50%;animation:spin 0.9s linear infinite;margin-inline-start:8px;vertical-align:-2px}
-    @keyframes spin{to{transform:rotate(360deg)}}
-    code{background:#f3f3f5;border:1px solid #ececf0;border-radius:6px;padding:2px 6px}
+    .segments{max-height:60vh;overflow:auto;border:1px solid #eee;border-radius:12px;padding:8px;background:#fff}
+    .seg{padding:8px;border-radius:10px;margin:6px 0;line-height:1.5;border:1px solid transparent;display:flex;gap:10px;align-items:flex-start}
+    .seg.active{background:#fff8cc;border-color:#ffeb86;scroll-margin:20vh}
+    .stamp{font-size:.8rem;color:#666;min-width:78px;text-align:center}
+    .spk{font-weight:700;margin-inline-end:6px}
+    .pill{display:inline-block;background:#eef3ff;border:1px solid #dbe6ff;border-radius:999px;padding:1px 7px;font-size:.8rem;margin-inline-start:6px}
+    .speaker-rename{display:flex;gap:8px;align-items:center;margin-top:10px}
+    .export{display:flex;gap:8px;flex-wrap:wrap}
+    pre{background:#0b1020;color:#d6deff;padding:14px;border-radius:12px;overflow:auto;max-height:40vh}
+    .error{background:#ffecee;border:1px solid #ffc2c7;color:#8a1020;border-radius:10px;padding:10px}
+    .ok{background:#ecfff3;border:1px solid #b9f1cc;color:#0d6b33;border-radius:10px;padding:10px}
+    .legend{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}
+    .legend span{background:#f3f4f6;border:1px solid #e5e7eb;padding:2px 8px;border-radius:999px;font-size:.8rem}
+    @media (max-width:900px){.grid{grid-template-columns:1fr}}
   </style>
+  <script src="https://www.youtube.com/iframe_api"></script>
 </head>
 <body>
-  <div class="card">
-    <h1>תמלול + זיהוי דוברים (RunPod)</h1>
+  <h1>תמללי — תמלול + זיהוי דוברים</h1>
 
-    <p class="muted">
-      פותחים את הדף הזה דרך <b>HTTP/HTTPS</b> (למשל <code>npx serve</code>, Netlify, GitHub Pages).
-      פתיחה כ־<code>file://</code> תוביל ל־CORS/Origin errors כמו <code>origin 'null'</code>.
-    </p>
+  <div class="grid">
+    <div class="card">
+      <h2>קלט וניגון</h2>
 
-    <label for="endpoint">RunPod Endpoint</label>
-    <input id="endpoint" type="url" placeholder="https://YOUR_RUNPOD_ENDPOINT_HERE/" value="https://YOUR_RUNPOD_ENDPOINT_HERE/" />
+      <label for="endpoint">RunPod Endpoint</label>
+      <input id="endpoint" type="url" placeholder="https://<your-id>-8000.proxy.runpod.net/" />
 
-    <label for="yt">קישור YouTube</label>
-    <input id="yt" type="url" placeholder="https://www.youtube.com/watch?v=XXXX" />
+      <div class="row">
+        <div style="flex:1">
+          <label for="yt">קישור YouTube (אופציונלי)</label>
+          <input id="yt" type="url" placeholder="https://www.youtube.com/watch?v=XXXX" />
+        </div>
+        <div class="muted">או</div>
+        <div style="flex:1">
+          <label for="file">בחר קובץ אודיו/וידאו (אופציונלי)</label>
+          <input id="file" type="file" accept="audio/*,video/*">
+        </div>
+      </div>
 
-    <div class="row">
-      <button id="sendBtn">שלח לעיבוד</button>
-      <span id="status" class="muted"></span>
+      <div class="row" style="margin-top:10px">
+        <button id="runBtn">הרץ עיבוד</button>
+        <span id="status" class="muted"></span>
+      </div>
+
+      <div id="alert" style="display:none;margin-top:10px"></div>
+
+      <h3 style="margin-top:16px">נגן</h3>
+      <div class="row">
+        <audio id="audio" controls style="width:100%;display:none"></audio>
+      </div>
+      <div class="row" style="margin-top:6px">
+        <div id="ytWrap" style="width:100%;display:none;aspect-ratio:16/9;background:#000;border-radius:10px;overflow:hidden">
+          <div id="ytPlayer"></div>
+        </div>
+      </div>
+      <div class="legend"><span>טיפ: מקליקים על משפט כדי לקפוץ בזמן. הנגן יצבע את המשפט המתנגן בצהוב.</span></div>
     </div>
 
-    <div id="alert" style="display:none"></div>
+    <div class="card">
+      <h2>תמלול מסונכרן</h2>
+      <div class="speaker-rename">
+        <label for="oldSpk" class="muted">שנה שם דובר:</label>
+        <input id="oldSpk" type="text" placeholder="SPEAKER_00" style="width:140px">
+        <span class="muted">→</span>
+        <input id="newName" type="text" placeholder="רונית (מרואיינת)" style="width:200px">
+        <button id="renameBtn">עדכן</button>
+      </div>
 
-    <div id="resultWrap" style="display:none; margin-top:16px">
-      <div class="ok">הבקשה בוצעה בהצלחה.</div>
-      <h3>תוצאות מעובדות</h3>
-      <table id="segmentsTable">
-        <thead>
-          <tr>
-            <th>התחלה</th>
-            <th>סיום</th>
-            <th>דובר</th>
-            <th>טקסט</th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
+      <div class="segments" id="segments"></div>
 
-      <h3>JSON גולמי</h3>
+      <h3>ייצוא</h3>
+      <div class="export">
+        <button id="expJson">ייצוא JSON</button>
+        <button id="expTxt">ייצוא TXT</button>
+        <button id="expSrt">ייצוא SRT</button>
+      </div>
+
+      <h3>פלט גולמי</h3>
       <pre id="raw"></pre>
     </div>
   </div>
 
   <script>
-    const $ = sel => document.querySelector(sel);
-    const sendBtn = $('#sendBtn');
+    const $ = s => document.querySelector(s);
+    const audioEl = $('#audio');
+    const ytWrap = $('#ytWrap');
+    const segWrap = $('#segments');
     const statusEl = $('#status');
     const alertEl = $('#alert');
-    const resultWrap = $('#resultWrap');
-    const tbody = $('#segmentsTable tbody');
-    const raw = $('#raw');
+    const rawEl = $('#raw');
+
+    let segments = [];          // [{start,end,text,speaker}, ...]
+    let activePlayer = null;    // 'audio' | 'youtube'
+    let ytPlayer = null;        // YouTube Iframe API instance
+    let ytVideoId = null;
 
     function showError(msg) {
-      alertEl.style.display = 'block';
       alertEl.className = 'error';
+      alertEl.style.display = 'block';
       alertEl.textContent = msg;
     }
-    function clearError() {
+    function showOk(msg) {
+      alertEl.className = 'ok';
+      alertEl.style.display = 'block';
+      alertEl.textContent = msg;
+    }
+    function clearAlert() {
       alertEl.style.display = 'none';
       alertEl.textContent = '';
       alertEl.className = '';
     }
 
-    function formatTime(sec) {
-      if (typeof sec !== 'number' || isNaN(sec)) return '-';
+    function hms(sec) {
       const s = Math.floor(sec % 60).toString().padStart(2,'0');
       const m = Math.floor((sec/60) % 60).toString().padStart(2,'0');
       const h = Math.floor(sec/3600).toString().padStart(2,'0');
-      return (h !== '00' ? (h + ':') : '') + m + ':' + s;
+      return (h!=='00'?h+':':'')+m+':'+s;
     }
 
-    async function callRunPod(endpointUrl, youtubeUrl) {
-      // RunPod serverless proxy מקבל JSON בסכמה { input: { ... } }
-      const payload = { input: { youtube_url: youtubeUrl } };
-      const res = await fetch(endpointUrl.replace(/\/+$/,'/'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        mode: 'cors',
-        body: JSON.stringify(payload),
+    function renderSegments() {
+      segWrap.innerHTML = '';
+      segments.forEach((seg, idx) => {
+        const el = document.createElement('div');
+        el.className = 'seg';
+        el.dataset.start = seg.start;
+        el.dataset.end = seg.end;
+        el.dataset.idx = idx;
+        el.dataset.speaker = seg.speaker || 'SPEAKER_UNKNOWN';
+
+        const stamp = document.createElement('div');
+        stamp.className = 'stamp';
+        stamp.textContent = `${hms(seg.start)}–${hms(seg.end)}`;
+
+        const body = document.createElement('div');
+        const spk = document.createElement('span');
+        spk.className = 'spk';
+        spk.textContent = (seg.speakerLabel || seg.speaker || 'SPEAKER_UNKNOWN') + ': ';
+
+        const text = document.createElement('span');
+        text.className = 'text';
+        text.textContent = seg.text || '';
+
+        // עריכה כפולה על מילה/משפט
+        text.addEventListener('dblclick', () => {
+          const input = document.createElement('input');
+          input.value = text.textContent;
+          input.style.width = '100%';
+          text.replaceWith(input);
+          input.focus();
+          input.addEventListener('blur', () => {
+            const val = input.value;
+            segments[idx].text = val;
+            const newT = document.createElement('span');
+            newT.className = 'text';
+            newT.textContent = val;
+            input.replaceWith(newT);
+          });
+          input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') input.blur();
+          });
+        });
+
+        body.appendChild(spk);
+        body.appendChild(text);
+
+        el.appendChild(stamp);
+        el.appendChild(body);
+
+        // קליק = דילוג לנקודה
+        el.addEventListener('click', () => {
+          const t = parseFloat(el.dataset.start);
+          if (activePlayer === 'audio') {
+            audioEl.currentTime = t;
+            audioEl.play().catch(()=>{});
+          } else if (activePlayer === 'youtube' && ytPlayer) {
+            ytPlayer.seekTo(t, true);
+            ytPlayer.playVideo();
+          }
+        });
+
+        segWrap.appendChild(el);
       });
-      if (!res.ok) {
-        const text = await res.text().catch(()=> '');
-        throw new Error(`HTTP ${res.status} – ${text || res.statusText}`);
-      }
-      // ייתכנו שני פורמטים: { status, segments } או החזרה גולמית
-      return res.json();
     }
 
-    sendBtn.onclick = async () => {
-      clearError();
-      resultWrap.style.display = 'none';
-      tbody.innerHTML = '';
-      raw.textContent = '';
+    function updateActiveHighlight(current) {
+      const nodes = segWrap.querySelectorAll('.seg');
+      let active = null;
+      nodes.forEach(n => {
+        const start = parseFloat(n.dataset.start);
+        const end = parseFloat(n.dataset.end);
+        const on = (current >= start && current < end);
+        n.classList.toggle('active', on);
+        if (on) active = n;
+      });
+      if (active) active.scrollIntoView({behavior:'smooth', block:'center'});
+    }
 
-      const endpointUrl = $('#endpoint').value.trim();
-      const youtubeUrl = $('#yt').value.trim();
+    // נגן Audio HTML5
+    audioEl.addEventListener('timeupdate', () => {
+      if (activePlayer !== 'audio') return;
+      updateActiveHighlight(audioEl.currentTime);
+    });
 
-      if (!endpointUrl || !/^https?:\/\//i.test(endpointUrl)) {
-        showError('יש להזין כתובת Endpoint תקינה (http/https).');
+    // YouTube API
+    window.onYouTubeIframeAPIReady = function(){
+      // יווצר אינסטנס רק ברגע שצריך
+    };
+    function initYouTube(videoId){
+      ytVideoId = videoId;
+      ytWrap.style.display = 'block';
+      audioEl.style.display = 'none';
+      activePlayer = 'youtube';
+      if (ytPlayer) {
+        ytPlayer.loadVideoById(videoId);
         return;
       }
-      if (!youtubeUrl || !/^https?:\/\/(www\.)?(youtube\.com|youtu\.be)\//i.test(youtubeUrl)) {
-        showError('יש להזין כתובת YouTube תקינה.');
+      ytPlayer = new YT.Player('ytPlayer', {
+        videoId,
+        playerVars: { playsinline: 1, origin: location.origin },
+        events: {
+          'onReady': () => { /* noop */ },
+          'onStateChange': () => { /* noop */ }
+        }
+      });
+      // פולינג עדין לזמן נוכחי
+      setInterval(() => {
+        if (activePlayer==='youtube' && ytPlayer && ytPlayer.getPlayerState) {
+          const st = ytPlayer.getPlayerState();
+          if (st === YT.PlayerState.PLAYING || st === YT.PlayerState.PAUSED) {
+            const t = ytPlayer.getCurrentTime();
+            updateActiveHighlight(t);
+          }
+        }
+      }, 300);
+    }
+
+    // העלאת קובץ → ניגון מקומי
+    $('#file').addEventListener('change', (e) => {
+      const f = e.target.files[0];
+      if (!f) return;
+      const url = URL.createObjectURL(f);
+      audioEl.src = url;
+      audioEl.style.display = 'block';
+      ytWrap.style.display = 'none';
+      activePlayer = 'audio';
+    });
+
+    // שינוי שם דובר
+    $('#renameBtn').onclick = () => {
+      const oldId = $('#oldSpk').value.trim();
+      const newName = $('#newName').value.trim();
+      if (!oldId || !newName) return;
+      segments.forEach(s => {
+        if ((s.speaker || 'SPEAKER_UNKNOWN') === oldId) {
+          s.speakerLabel = newName;
+        }
+      });
+      renderSegments();
+      showOk(`עודכנו מופעי ${oldId} ל-“${newName}”.`);
+    };
+
+    // ייצוא
+    $('#expJson').onclick = () => {
+      const blob = new Blob([JSON.stringify(segments, null, 2)], {type:'application/json'});
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'transcript.json'; a.click();
+    };
+    $('#expTxt').onclick = () => {
+      const lines = segments.map(s => `${(s.speakerLabel||s.speaker||'SPEAKER_UNKNOWN')}: ${s.text||''}`);
+      const blob = new Blob([lines.join('\n')], {type:'text/plain'});
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'transcript.txt'; a.click();
+    };
+    $('#expSrt').onclick = () => {
+      const toSrtTime = (sec) => {
+        const ms = Math.floor((sec - Math.floor(sec)) * 1000).toString().padStart(3,'0');
+        const s = Math.floor(sec % 60).toString().padStart(2,'0');
+        const m = Math.floor((sec/60)%60).toString().padStart(2,'0');
+        const h = Math.floor(sec/3600).toString().padStart(2,'0');
+        return `${h}:${m}:${s},${ms}`;
+      };
+      let i=1, srt=[];
+      segments.forEach(s=>{
+        srt.push(String(i++));
+        srt.push(`${toSrtTime(s.start)} --> ${toSrtTime(s.end)}`);
+        const name = (s.speakerLabel||s.speaker||'SPEAKER_UNKNOWN');
+        srt.push(`${name}: ${s.text||''}`);
+        srt.push('');
+      });
+      const blob = new Blob([srt.join('\n')], {type:'text/plain'});
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'transcript.srt'; a.click();
+    };
+
+    // קריאה ל-RunPod
+    $('#runBtn').onclick = async () => {
+      clearAlert();
+      rawEl.textContent = '';
+      segWrap.innerHTML = '';
+      segments = [];
+
+      const endpoint = $('#endpoint').value.trim().replace(/\/+$/,''); // בלי / בסוף
+      const yt = $('#yt').value.trim();
+      const file = $('#file').files[0];
+
+      if (!endpoint || !/^https?:\/\//i.test(endpoint)) {
+        showError('נא להזין כתובת Endpoint תקינה (http/https).');
+        return;
+      }
+
+      let payload = { input: {} };
+
+      if (yt) {
+        // YouTube — משתמשים ב-iframe API לניגון
+        const id = (yt.match(/(?:v=|youtu\.be\/)([^&?/]+)/)||[])[1];
+        if (id) initYouTube(id);
+        payload.input.youtube_url = yt;
+      } else if (file) {
+        // קובץ: קוראים ומקודדים כ-Base64 data URL
+        const b64 = await new Promise((res,rej)=>{
+          const r = new FileReader();
+          r.onload = () => res(r.result);
+          r.onerror = rej;
+          r.readAsDataURL(file);
+        });
+        payload.input.audio_b64 = b64;
+
+        // אפשר לנגן לוקאלית (כבר נטען ב-onchange)
+        if (!yt) {
+          audioEl.style.display = 'block';
+          activePlayer = 'audio';
+        }
+      } else {
+        showError('נא להזין קישור YouTube או לבחור קובץ.');
         return;
       }
 
       try {
-        sendBtn.disabled = true;
-        statusEl.innerHTML = 'מריץ עיבוד ב־RunPod <span class="spinner"></span>';
+        $('#runBtn').disabled = true;
+        statusEl.textContent = 'מריץ עיבוד ב-RunPod… זה עשוי לקחת זמן תלוי באורך הקובץ.';
 
-        const data = await callRunPod(endpointUrl, youtubeUrl);
+        const res = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json().catch(()=> ({}));
 
+        $('#runBtn').disabled = false;
         statusEl.textContent = '';
-        sendBtn.disabled = false;
 
-        // ננסה לתמוך גם במבנה {status, segments} וגם ברשימת אובייקטים
-        const segments = Array.isArray(data)
-          ? data
-          : (Array.isArray(data?.segments) ? data.segments : []);
+        rawEl.textContent = JSON.stringify(data, null, 2);
 
-        if (!segments.length) {
-          raw.textContent = JSON.stringify(data, null, 2);
-          showError('לא התקבלו מקטעים. בדוק את הפלט הגולמי למטה ואת לוג השרת.');
-          resultWrap.style.display = 'block';
+        const segs = Array.isArray(data) ? data : (data.segments || []);
+        if (!segs.length) {
+          showError('לא התקבלו מקטעים. בדוק את ה-JSON ואת לוג השרת.');
           return;
         }
-
-        // הצגה בטבלה
-        for (const seg of segments) {
-          const tr = document.createElement('tr');
-          const tdStart = document.createElement('td');
-          const tdEnd = document.createElement('td');
-          const tdSpk = document.createElement('td');
-          const tdTxt = document.createElement('td');
-
-          tdStart.textContent = formatTime(seg.start);
-          tdEnd.textContent = formatTime(seg.end);
-          tdSpk.innerHTML = `<span class="pill">${seg.speaker ?? 'SPEAKER_UNKNOWN'}</span>`;
-          tdTxt.textContent = seg.text ?? '';
-
-          tr.appendChild(tdStart);
-          tr.appendChild(tdEnd);
-          tr.appendChild(tdSpk);
-          tr.appendChild(tdTxt);
-          tbody.appendChild(tr);
-        }
-
-        raw.textContent = JSON.stringify(data, null, 2);
-        resultWrap.style.display = 'block';
+        // Normalize + render
+        segments = segs.map(s => ({
+          start: Number(s.start)||0,
+          end: Number(s.end)||0,
+          text: s.text || '',
+          speaker: s.speaker || 'SPEAKER_UNKNOWN'
+        }));
+        renderSegments();
+        showOk('העיבוד הסתיים בהצלחה.');
 
       } catch (err) {
+        $('#runBtn').disabled = false;
         statusEl.textContent = '';
-        sendBtn.disabled = false;
-        showError(`נכשלה בקשת fetch: ${err.message}`);
+        showError('נכשלה הבקשה: ' + err.message);
       }
     };
   </script>
